@@ -1,6 +1,7 @@
 <script>
 import HomeView from './HomeView.vue'; // Move this line to the top
 import axios from 'axios';
+import router from "@/router/index.js";
 
 const ip_start = "http://localhost:3001";
 export default {
@@ -42,6 +43,7 @@ export default {
         // Hide folders and document details, show the login form, and hide the logout button
         this.showLogin();
         console.log('Logout successful.');
+        await router.push('/');
       } catch (error) {
         console.error('Error during logout:', error);
         alert('Error during logout. Please check console for details.');

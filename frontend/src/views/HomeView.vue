@@ -1,5 +1,6 @@
 <script>
 import axios from 'axios';
+import router from "@/router/index.js";
 
 const ip_start = "http://localhost:3001";
 export default {
@@ -80,6 +81,7 @@ export default {
 
     async handleSuccessfulLogin(userData) {
       console.log('Login successful.');
+      await router.push('/about');
 
       // Call getFolders() to fetch and display folders
       await this.getFolders();
