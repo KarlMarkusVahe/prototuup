@@ -12,6 +12,15 @@ export default {
       folders: [] // Assuming this is where you store the folders
     };
   },
+  mounted() {
+    // Check if user is already logged in
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    if (userData) {
+      this.showFolders();
+    } else {
+      this.showLogin();
+    }
+  },
   methods: {
     async logout() {
       try {
@@ -40,13 +49,9 @@ export default {
     },
     async showFolders() {
       // Assuming this function populates the folders array
-      await this.getFolders();
+      const folders = await this.getFolders();
 
-      await this.displayFolders();
-    },
-    async displayFolders() {
-      // Assuming this function is in HomeView and takes folderList as a parameter
-      await this.$refs.homeView.displayFolders(this.folders);
+      await this.displayFolders(folders);
     },
     async updatePrivileges(id, email, privileges) {
       try {
@@ -81,15 +86,154 @@ export default {
       document.getElementById('documentDetails').style.display = 'none';
       document.getElementById('logoutContainer').style.display = 'none';
     },
-  },
-  mounted() {
-    // Check if user is already logged in
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    if (userData) {
-      this.showFolders();
-    } else {
-      this.showLogin();
-    }
+    async getFolders() {
+      try {
+        const foldersResponse = await this.fetchData(ip_start + '/folders', 'GET');
+
+        if (foldersResponse.status === 202) {
+          // Return folders from response
+          return foldersResponse.data.data;
+        } else {
+          console.error('Error fetching folders:', foldersResponse);
+          alert('Error fetching folders. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error getting folders:', error);
+        alert('Error getting folders. Please check console for details.');
+      }
+    },
+    async fetchData(url, method = 'GET', data = null) {
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+
+        const options = {
+          method,
+          headers,
+          url: url,
+          withCredentials: true, // Ensure credentials are sent with the request
+          data: JSON.stringify(data)
+        };
+
+        const response = await axios(options);
+
+        console.log(response);
+
+        if (!response.statusText === "Accepted") {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        return response;
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        throw error;
+      }
+    },
+    async displayFolders(folders) {
+      const folderList = document.getElementById('folderList');
+      console.log(folderList);
+      folderList.innerHTML = ''; // Clear existing folder list
+
+      for (const folder of folders) {
+        const folderItem = document.createElement('li');
+        folderItem.textContent = folder.PEALKIRI;
+
+        // Attach a click event listener to each folder item
+        folderItem.addEventListener('click', async (event) => {
+          console.log('Folder clicked:', folder.PEALKIRI); // Add this line for debugging
+
+          const clickedFolderItem = event.currentTarget;
+          const contentList = clickedFolderItem.querySelector('ul');
+
+          // If the folder is already open, close it and return
+          if (contentList) {
+            clickedFolderItem.removeChild(contentList);
+            return;
+          }
+
+          // Otherwise, show the folder contents
+          await this.showFolderContents(folder, clickedFolderItem); // Pass the clicked folder item as the second argument
+        });
+
+        folderItem.setAttribute('data-folder-id', folder.ID);
+        folderList.appendChild(folderItem);
+      }
+    },
+    async showFolderContents(folder, parentElement) {
+      let contentList = parentElement.querySelector('ul');
+
+      // If the folder is already open, close it and return
+      if (contentList) {
+        parentElement.removeChild(contentList);
+        return;
+      }
+
+      // Create a new ul element to hold the contents
+      contentList = document.createElement('ul');
+      parentElement.appendChild(contentList);
+
+      // Display documents
+      for (const doc of folder.documents) {
+        const documentItem = document.createElement('li');
+        documentItem.textContent = doc.DOKUMENT_PEALKIRI;
+
+        // Attach a click event listener to each document item
+        documentItem.addEventListener('click', async (event) => {
+          event.stopPropagation(); // Prevent the event from bubbling up to the folder
+          await this.showDocumentDetails(doc);
+        });
+
+        contentList.appendChild(documentItem);
+      }
+
+      // Display subfolders
+      for (const subfolder of folder.folders) {
+        const folderItem = document.createElement('li');
+        folderItem.textContent = subfolder.PEALKIRI;
+
+        // Attach a click event listener to each folder item
+        folderItem.addEventListener('click', async (event) => {
+          event.stopPropagation(); // Prevent the event from bubbling up to the parent folder
+          await this.showFolderContents(subfolder, folderItem); // Recursively show the subfolder contents
+        });
+
+        contentList.appendChild(folderItem);
+      }
+    },
+    // filter function
+    filter() {
+      // Declare variables
+      var input, filter, ul, li, a, i, txtValue;
+      input = document.getElementById('myInput');
+      filter = input.value.toUpperCase();
+      ul = document.getElementById("folderList");
+      li = ul.getElementsByTagName('li');
+
+      // Loop through all list items, and hide those who don't match the search query
+      for (i = 0; i < li.length; i++) {
+        a = li[i];
+        txtValue = a.textContent || a.innerText;
+        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+          li[i].style.display = "";
+        } else {
+          li[i].style.display = "none";
+        }
+      }
+    },
+    async showDocumentDetails(doc) {
+      const documentTitle = document.getElementById('documentTitle');
+      const documentType = document.getElementById('documentType');
+      const documentId = document.getElementById('documentId');
+
+      // Display document details in the UI
+      documentTitle.textContent = doc.DOKUMENT_PEALKIRI;
+      documentType.textContent = doc.DOKUMENT_TYYP;
+      documentId.textContent = doc.DocumentID;
+
+      // Show the document details container
+      document.getElementById('documentDetails').style.display = 'block';
+    },
   }
 }
 </script>

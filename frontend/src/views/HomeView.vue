@@ -54,10 +54,6 @@ export default {
         const loginResponse = await this.fetchData(ip_start + '/users', 'POST', userData);
 
         if (loginResponse.status === 202) {
-          // Check if the loginResponse contains the user ID
-          if (loginResponse.data.userId) {
-            userData.userId = loginResponse.data.userId;
-          }
 
           localStorage.setItem('userData', JSON.stringify(userData));
           await this.handleSuccessfulLogin(userData);
@@ -84,7 +80,6 @@ export default {
 
     async handleSuccessfulLogin(userData) {
       console.log('Login successful.');
-      console.log('User ID:', userData.id); // Assuming the user ID is part of the userData object
 
       // Call getFolders() to fetch and display folders
       await this.getFolders();
