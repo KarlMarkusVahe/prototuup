@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Management System</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="container mt-5">
+
+<div id="logoutContainer" style="display:none;">
+  <button class="btn btn-danger" onclick="logout()">Logout</button>
+</div>
+
+<div id="loginContainer" class="text-center">
+  <h3>Login</h3>
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <input type="text" class="form-control" id="username" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" class="form-control" id="password" required>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="login()">Login</button>
+  </form>
+</div>
+
+<input type="text" id="myInput" onkeyup="filter()" placeholder="Search for names..">
+
+<div id="folders" style="display:none;" class="mt-4">
+  <h3>Folders</h3>
+  <ul id="folderList" class="list-group"></ul>
+</div>
+
+<div id="documentDetails" style="display:none;" class="mt-4">
+  <h3>Document Details</h3>
+  <p><strong>Title:</strong> <span id="documentTitle"></span></p>
+  <p><strong>Document Type:</strong> <span id="documentType"></span></p>
+  <p><strong>ID:</strong> <span id="documentId"></span></p>
+  <button id="shareButton" class="btn btn-primary" onclick="shareDocument()">Share</button>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+<script>
+
+  const ip_start = "http://localhost:3000";
+
+  data = null
+  method = 'GET'
+  async function fetchData(url, method = 'GET', data = null) {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      const options = {
+        method,
+        headers,
+        url: url,
+        withCredentials: true, // Ensure credentials are sent with the request
+        data: JSON.stringify(data)
+      };
+
+      const response = await axios(options);
+
+      console.log(response)
+
+      if (!response.statusText === "Accepted") {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      throw error;
+    }
+  }
+
+  // Check if the user is already logged in when the page loads
+  document.addEventListener('DOMContentLoaded', async () => {
+    const storedUserData = localStorage.getItem('userData');
+    if (storedUserData) {
+      try {
+        const userData = JSON.parse(storedUserData);
+        await handleSuccessfulLogin(userData);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+      }
+    }
+  });
+
+  async function login(url) {
+    const email = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    const userData = {
+      email,
+      password
+    };
+
+    try {
+      //const loginResponse = await fetchData(ip_start + '/users', 'POST', userData);
+      const loginResponse = await axios.post(ip_start + "/users", userData, {
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                method,
+                url,
+                withCredentials: true, // Ensure credentials are sent with the request
+                data: JSON.stringify(data)
+              },
+      );
+
+      if (loginResponse.status === 202) {
+        document.getElementById('loginContainer').style.display = 'none';
+        document.getElementById('folders').style.display = 'block';
+        document.getElementById('documentDetails').style.display = 'block';
+        document.getElementById('logoutContainer').style.display = 'block';
+
+        console.log('Login successful.');
+
+        // Call getFolders() to fetch and display folders
+        await getFolders();
+
+        localStorage.setItem('userData', JSON.stringify(userData));
+        await handleSuccessfulLogin(userData);
+
+      } else {
+        if (loginResponse.status === 401) {
+          alert('Invalid username or password.');
+        } else {
+          alert('Unexpected error during login. Please try again.');
+        }
+        console.log('Login response:', loginResponse);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+
+      if (error.response) {
+        console.error('Response details:', error.response.status, error.response.statusText);
+        const responseBody = await error.response.json();
+        console.error('Response body:', responseBody);
+      }
+
+      alert('Error during login. Please check console for details.');
+    }
+  }
+
+  // Filter function
+  function filter() {
+    // Get the input element
+    var input = document.getElementById('myInput');
+    // Convert the input value to uppercase
+    var filter = input.value.toUpperCase();
+    // Get the unordered list
+    var ul = document.getElementById("folderList");
+    // Get the list items from the unordered list
+    var li = ul.getElementsByTagName('li');
+
+    // Loop through all list items
+    for (var i = 0; i < li.length; i++) {
+      // Get the current list item
+      var a = li[i];
+      // Get the text content or inner text of the current list item
+      var txtValue = a.textContent || a.innerText;
+
+      // If the list item contains the input value
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        // Display the list item
+        li[i].style.display = "";
+      } else {
+        // Hide the list item
+        li[i].style.display = "none";
+      }
+    }
+  }
+
+  async function handleSuccessfulLogin(userData) {
+    document.getElementById('loginContainer').style.display = 'none';
+    document.getElementById('folders').style.display = 'block';
+    document.getElementById('documentDetails').style.display = 'block';
+    document.getElementById('logoutContainer').style.display = 'block';
+
+    console.log('Login successful.');
+
+    // Call getFolders() to fetch and display folders
+    await getFolders();
+  }
+
+  async function logout() {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData'));
+
+      // Make a request to your server to destroy the session
+      await axios.delete('http://localhost:3000/users', {
+        withCredentials: true, // Ensure credentials are sent with the request
+        headers: {
+          'Content-Type': 'application/json',
+          // Add any additional headers needed for authentication
+          // For example, if using a token: 'Authorization': `Bearer ${userData.token}`
+        },
+      });
+
+      // Clear client-side stored data
+      localStorage.removeItem('userData');
+
+      // Hide folders and document details, show the login form, and hide the logout button
+      document.getElementById('loginContainer').style.display = 'block';
+      document.getElementById('folders').style.display = 'none';
+      document.getElementById('documentDetails').style.display = 'none';
+      document.getElementById('logoutContainer').style.display = 'none';
+
+      console.log('Logout successful.');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      alert('Error during logout. Please check console for details.');
+    }
+  }
+
+  // Add this function to handle displaying documents when a folder is clicked
+  async function showFolderContents(folder, parentElement) {
+    let contentList = parentElement.querySelector('ul');
+
+    // If the folder is already open, close it and return
+    if (contentList) {
+      parentElement.removeChild(contentList);
+      return;
+    }
+
+    // Create a new ul element to hold the contents
+    contentList = document.createElement('ul');
+    parentElement.appendChild(contentList);
+
+    // Display documents
+    for (const doc of folder.documents) {
+      const documentItem = document.createElement('li');
+      documentItem.textContent = doc.DOKUMENT_PEALKIRI;
+
+      // Attach a click event listener to each document item
+      documentItem.addEventListener('click', async (event) => {
+        event.stopPropagation(); // Prevent the event from bubbling up to the folder
+        await showDocumentDetails(doc);
+      });
+
+      contentList.appendChild(documentItem);
+    }
+
+    // Display subfolders
+    for (const subfolder of folder.folders) {
+      const folderItem = document.createElement('li');
+      folderItem.textContent = subfolder.PEALKIRI;
+
+      // Attach a click event listener to each folder item
+      folderItem.addEventListener('click', async (event) => {
+        event.stopPropagation(); // Prevent the event from bubbling up to the parent folder
+        await showFolderContents(subfolder, folderItem); // Recursively show the subfolder contents
+      });
+
+      contentList.appendChild(folderItem);
+    }
+  }
+
+  // Add this function to handle displaying document details in the UI
+  function showDocumentDetails(doc) {
+    const documentTitle = document.getElementById('documentTitle');
+    const documentType = document.getElementById('documentType');
+    const documentId = document.getElementById('documentId');
+
+    // Display document details in the UI
+    documentTitle.textContent = doc.DOKUMENT_PEALKIRI;
+    documentType.textContent = doc.DOKUMENT_TYYP;
+    documentId.textContent = doc.DocumentID;
+
+    // Show the document details container
+    document.getElementById('documentDetails').style.display = 'block';
+  }
+
+  async function getFolders() {
+    try {
+      const foldersResponse = await fetchData(ip_start + '/folders', 'GET');
+
+      if (foldersResponse.status === 202) {
+        // Display folders in the UI
+        displayFolders(foldersResponse.data.data);
+      } else {
+        console.error('Error fetching folders:', foldersResponse);
+        alert('Error fetching folders. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error getting folders:', error);
+      alert('Error getting folders. Please check console for details.');
+    }
+  }
+
+  // Add this function to handle displaying folders
+  async function displayFolders(folders) {
+    const folderList = document.getElementById('folderList');
+    folderList.innerHTML = ''; // Clear existing folder list
+
+    for (const folder of folders) {
+      const folderItem = document.createElement('li');
+      folderItem.textContent = folder.PEALKIRI;
+
+      // Attach a click event listener to each folder item
+      folderItem.addEventListener('click', async (event) => {
+        console.log('Folder clicked:', folder.PEALKIRI); // Add this line for debugging
+
+        const clickedFolderItem = event.currentTarget;
+        const contentList = clickedFolderItem.querySelector('ul');
+
+        // If the folder is already open, close it and return
+        if (contentList) {
+          clickedFolderItem.removeChild(contentList);
+          return;
+        }
+
+        // Otherwise, show the folder contents
+        await showFolderContents(folder, clickedFolderItem); // Pass the clicked folder item as the second argument
+      });
+
+      folderItem.setAttribute('data-folder-id', folder.ID);
+      folderList.appendChild(folderItem);
+    }
+  }
+
+  async function updatePrivileges(id, email, privileges) {
+    await axios.put(ip_start + `/${id}/privileges`, {
+      email: email,
+      privileges: privileges
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true, // Ensure credentials are sent with the request
+    })
+            .then(function (response) {
+              console.log(response.data);
+            })
+            .catch(function (error) {
+              console.error(error);
+              console.error(error.config);
+            });
+  }
+
+  function shareDocument() {
+    let id = document.getElementById('documentId').innerText;
+    let email = prompt("Please enter the email of the user you want to share with:");
+    let privileges = {
+      READ_PRIVILEEG: true,
+      WRITE_PRIVILEEG: false,
+      DELETE_PRIVILEEG: false
+    };
+    updatePrivileges(id, email, privileges);
+  }
+
+</script>
+
+</body>
+</html>
