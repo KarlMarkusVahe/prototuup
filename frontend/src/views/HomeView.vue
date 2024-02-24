@@ -48,7 +48,8 @@ export default {
 
       const userData = {
         email,
-        password
+        password,
+        loggedIn: true
       };
 
       try {

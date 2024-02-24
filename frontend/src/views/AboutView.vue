@@ -57,7 +57,7 @@ export default {
     },
     async updatePrivileges(id, email, privileges) {
       try {
-        const response = await axios.put(`${ip_start}/${id}/privileges`, {
+        const response = await axios.put(`${ip_start}/documents/${id}/privileges`, {
           email: email,
           privileges: privileges
         }, {
@@ -73,14 +73,20 @@ export default {
       }
     },
     shareDocument() {
-      let id = document.getElementById('documentId').innerText;
-      let email = prompt("Please enter the email of the user you want to share with:");
-      let privileges = {
-        READ_PRIVILEEG: true,
-        WRITE_PRIVILEEG: false,
-        DELETE_PRIVILEEG: false
-      };
-      this.updatePrivileges(id, email, privileges);
+      let userData = JSON.parse(localStorage.getItem('userData'));
+
+      if (userData && userData.loggedIn) {
+        let id = document.getElementById('documentId').innerText;
+        let email = prompt("Please enter the email of the user you want to share with:");
+        let privileges = {
+          READ_PRIVILEEG: true,
+          WRITE_PRIVILEEG: false,
+          DELETE_PRIVILEEG: false
+        };
+        this.updatePrivileges(id, email, privileges);
+      } else {
+        alert('You must be logged in to share documents.');
+      }
     },
     showLogin() {
       document.getElementById('loginContainer').style.display = 'block';
