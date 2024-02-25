@@ -78,12 +78,48 @@ export default {
       if (userData && userData.loggedIn) {
         let id = document.getElementById('documentId').innerText;
         let email = prompt("Please enter the email of the user you want to share with:");
-        let privileges = {
-          READ_PRIVILEEG: true,
-          WRITE_PRIVILEEG: false,
-          DELETE_PRIVILEEG: false
-        };
-        this.updatePrivileges(id, email, privileges);
+
+        // Create an input form for selecting privileges
+        let privilegesForm = document.createElement('form');
+        privilegesForm.innerHTML = `
+      <div>
+        <input type="checkbox" id="readPrivilege" name="readPrivilege" value="read">
+        <label for="readPrivilege">Read</label>
+      </div>
+      <div>
+        <input type="checkbox" id="writePrivilege" name="writePrivilege" value="write">
+        <label for="writePrivilege">Write</label>
+      </div>
+      <div>
+        <input type="checkbox" id="deletePrivilege" name="deletePrivilege" value="delete">
+        <label for="deletePrivilege">Delete</label>
+      </div>
+      <button type="submit">Share</button>
+    `;
+
+        // Display the input form in a dialog
+        let dialog = document.createElement('dialog');
+        dialog.appendChild(privilegesForm);
+        document.body.appendChild(dialog);
+        dialog.showModal();
+
+        // Handle form submission
+        privilegesForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          // Get selected privileges
+          let privileges = {
+            READ_PRIVILEEG: document.getElementById('readPrivilege').checked,
+            WRITE_PRIVILEEG: document.getElementById('writePrivilege').checked,
+            DELETE_PRIVILEEG: document.getElementById('deletePrivilege').checked,
+          };
+
+          // Close the dialog
+          dialog.close();
+
+          // Update privileges
+          await this.updatePrivileges(id, email, privileges);
+        });
       } else {
         alert('You must be logged in to share documents.');
       }
